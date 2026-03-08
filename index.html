@@ -87,15 +87,11 @@
                                 generatedCount++;
                                 setImageProgress(`Creating image URL ${generatedCount} of ${totalPosts}...`);
                                 
-                                // Create prompt from post content
-                                const imagePrompt = createImagePrompt(projectId, post.content, post.platform, forceNew);
+                                // Create search keywords from post content
+                                const imageKeywords = getImageKeywords(projectId, post.content);
                                 
-                                // Add timestamp to force fresh loads
-                                const timestamp = Date.now() + generatedCount;
-                                
-                                // Pollinations.ai uses a simple URL structure
-                                const encodedPrompt = encodeURIComponent(imagePrompt);
-                                const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=1200&nologo=true&seed=${timestamp}`;
+                                // Use Unsplash API for free stock photos (much more reliable)
+                                const imageUrl = `https://source.unsplash.com/1200x1200/?${encodeURIComponent(imageKeywords)}`;
                                 
                                 // Store the image URL
                                 post.imageUrl = imageUrl;
@@ -150,6 +146,38 @@
                 // Force re-render by creating a new copy of content
                 setGeneratedContent({...generatedContent});
                 alert('✅ Images refreshed! They should load now.');
+            };
+            
+            const getImageKeywords = (projectId, postContent) => {
+                // Extract relevant keywords for stock photo search
+                const contentLower = postContent.toLowerCase();
+                
+                // Project-specific keywords
+                if (projectId === 'podcast-pal') {
+                    return 'podcast,microphone,headphones,broadcasting,studio';
+                } else if (projectId === 'breaking-cycle') {
+                    if (contentLower.includes('chain') || contentLower.includes('break')) {
+                        return 'chain,freedom,breaking,metallic';
+                    } else if (contentLower.includes('journal') || contentLower.includes('episode')) {
+                        return 'journal,writing,candlelight,notebook';
+                    } else {
+                        return 'path,forest,journey,sunrise';
+                    }
+                } else if (projectId === 'ai-bots') {
+                    return 'technology,laptop,education,digital,learning';
+                } else if (projectId === 'consultancy') {
+                    return 'desk,workspace,professional,notebook,planning';
+                } else if (projectId === 'echoes') {
+                    if (contentLower.includes('photo') || contentLower.includes('memory')) {
+                        return 'vintage,photos,album,memories,nostalgia';
+                    } else {
+                        return 'family,sunset,silhouette,together';
+                    }
+                } else if (projectId === 'daisy-chain') {
+                    return 'daisy,flower,white-flower,nature,minimalist';
+                }
+                
+                return 'minimalist,professional,clean';
             };
             
             const createImagePrompt = (projectId, postContent, platform, forceNew = false) => {
