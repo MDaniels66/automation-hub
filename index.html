@@ -131,7 +131,7 @@
             };
             
             const createImagePrompt = (projectId, postContent, platform, forceNew = false) => {
-                const baseStyle = "ultra high quality, professional photography, 2026 social media aesthetic, trending visual style, ";
+                const baseStyle = "professional stock photography, high quality commercial image, clean professional aesthetic, award-winning photography, ";
                 
                 // Extract key themes from caption for intentional matching
                 const contentLower = postContent.toLowerCase();
@@ -143,90 +143,68 @@
                 
                 let specificPrompt = "";
                 
-                // PODCAST PAL - Green branding, international collaboration
+                // PODCAST PAL - Focus on OBJECTS and SPACES, not people
                 if (projectId === 'podcast-pal') {
-                    if (contentLower.includes('student') && contentLower.includes('confidence')) {
-                        specificPrompt = "diverse students collaborating with headphones and laptops, bright lime green accent wall, international flags, modern educational space, natural light, authentic candid moment, professional education photography";
-                    } else if (contentLower.includes('curriculum') || contentLower.includes('toolkit')) {
-                        specificPrompt = "sleek podcast microphone on desk with green plant, modern minimalist workspace, lime green accents, educational materials visible, clean professional aesthetic, soft natural lighting";
-                    } else {
-                        specificPrompt = weekMod === 0 
-                            ? "international video call on laptop screen, diverse students waving, green themed workspace, modern tech aesthetic, warm authentic moment"
-                            : weekMod === 1
-                            ? "professional podcast recording setup, lime green soundproofing, modern studio, headphones and mic, educational tech theme"
-                            : "global collaboration concept, world map with green connecting lines, modern educational technology, inspiring and professional";
-                    }
+                    specificPrompt = weekMod === 0 
+                        ? "professional podcast microphone in modern studio, lime green accent lighting, headphones on desk, clean minimalist workspace, broadcasting equipment, high-end audio setup"
+                        : weekMod === 1
+                        ? "world map with glowing connection lines between continents, green and blue color scheme, global network visualization, educational technology concept, modern infographic style"
+                        : "stack of colorful international flags on modern desk, bright lime green notebook, podcast recording equipment visible, educational materials, inspiring workspace flatlay";
                 }
                 
-                // BREAKING THE CYCLE - Dark dramatic, healing journey
+                // BREAKING THE CYCLE - Focus on OBJECTS and SYMBOLS
                 else if (projectId === 'breaking-cycle') {
-                    if (contentLower.includes('pattern') || contentLower.includes('heal')) {
-                        specificPrompt = "rusty old chain breaking apart in dramatic lighting, dark brown background with warm golden glow, powerful healing metaphor, cinematic high contrast, textured and raw";
-                    } else if (contentLower.includes('episode 1') || contentLower.includes('live')) {
-                        specificPrompt = "open journal on dark wooden table with pen, soft candlelight, handwritten healing words faintly visible, warm brown and cream tones, intimate contemplative mood, cozy aesthetic";
-                    } else {
-                        specificPrompt = weekMod === 0
-                            ? "single person walking away from darkness toward warm sunrise, silhouette, healing journey visual metaphor, hope and transformation, cinematic dramatic lighting"
-                            : weekMod === 1  
-                            ? "broken chains transformed into blooming wildflowers, dark background with golden light, healing and growth symbolism, beautiful artistic composition"
-                            : "pathway splitting in misty forest, choosing new direction, soft morning light, personal transformation metaphor, peaceful determination, atmospheric and hopeful";
-                    }
+                    specificPrompt = weekMod === 0
+                        ? "heavy rusty chain breaking apart with golden light shining through the break, dramatic dark brown background, powerful metaphor, cinematic lighting, hope and freedom symbolism"
+                        : weekMod === 1  
+                        ? "open leather journal on dark wooden table, fountain pen, soft candlelight glow, handwritten inspirational quotes visible, warm brown tones, intimate cozy aesthetic, healing atmosphere"
+                        : "single pathway through misty forest at dawn, fork in road ahead, soft golden sunlight filtering through trees, new beginnings metaphor, peaceful determination, atmospheric morning light";
                 }
                 
-                // AI BOTS - Green tech, friendly educational
+                // AI BOTS - Focus on TECH and OBJECTS
                 else if (projectId === 'ai-bots') {
-                    if (contentLower.includes('student') && contentLower.includes('embarrassed')) {
-                        specificPrompt = "friendly AI interface on laptop screen helping student, soft green glow, cozy educational setting, warm encouraging atmosphere, modern classroom, authentic candid moment";
-                    } else if (contentLower.includes('support') || contentLower.includes('diverse')) {
-                        specificPrompt = "holographic green AI neural network floating above desk, educational icons, modern technology meets teaching, futuristic yet approachable, inspiring innovation, clean aesthetic";
-                    } else {
-                        specificPrompt = "teacher and student collaborating with tablet showing educational AI app, green accent lighting, modern bright classroom, natural interaction, professional education photography";
-                    }
+                    specificPrompt = weekMod === 0
+                        ? "laptop displaying colorful AI interface dashboard, soft green ambient lighting, modern workspace, digital education icons on screen, clean tech aesthetic, futuristic learning tools"
+                        : weekMod === 1
+                        ? "glowing green neural network visualization, abstract AI circuitry, educational technology concept, modern digital art, inspiring innovation imagery, clean professional look"
+                        : "tablet showing friendly educational app interface, bright modern classroom background slightly blurred, green accent colors, technology meets learning, optimistic future of education";
                 }
                 
-                // CONSULTANCY - Professional yellow/grey
+                // CONSULTANCY - Focus on WORKSPACE and MATERIALS
                 else if (projectId === 'consultancy') {
-                    if (contentLower.includes('training') || contentLower.includes('staff')) {
-                        specificPrompt = "professional educators in training workshop, modern conference room, yellow accent wall, collaborative engagement, natural light, contemporary corporate aesthetic, authentic interaction";
-                    } else if (contentLower.includes('curriculum') || contentLower.includes('consultation')) {
-                        specificPrompt = "organized educational planning materials on modern desk, yellow folders and notebooks, overhead flat lay shot, clean professional workspace, minimalist aesthetic";
-                    } else {
-                        specificPrompt = "diverse teachers collaborating around whiteboard, modern school setting, yellow decor accents, professional development atmosphere, warm natural lighting, engaging moment";
-                    }
+                    specificPrompt = weekMod === 0
+                        ? "organized modern desk flatlay, yellow folders and notebooks, coffee cup, planning calendar, professional educational materials, clean minimalist workspace, overhead view, natural light"
+                        : weekMod === 1
+                        ? "modern conference room with whiteboard covered in colorful sticky notes, bright yellow accent wall, professional training space, natural window light, collaborative atmosphere"
+                        : "stack of educational books and training materials, yellow highlights and sticky notes, laptop and coffee, professional development setup, inspiring learning environment, warm lighting";
                 }
                 
-                // ECHOES - Soft turquoise, gentle legacy
+                // ECHOES - Focus on OBJECTS and MEMORIES
                 else if (projectId === 'echoes') {
-                    if (contentLower.includes('legacy') || contentLower.includes('record')) {
-                        specificPrompt = "elderly hands gently holding young child's hands, soft turquoise lighting, tender multi-generational moment, emotional family photography, loving connection, peaceful and heartfelt";
-                    } else if (contentLower.includes('grandmother') || contentLower.includes('memory')) {
-                        specificPrompt = "vintage photo album pages being turned, soft focus, turquoise and grey color tones, nostalgic family memories, timeless moments, gentle and peaceful composition";
-                    } else {
-                        specificPrompt = weekMod === 0
-                            ? "family silhouettes walking together at sunset, soft turquoise and lavender sky, generations united, peaceful legacy theme, serene hopeful atmosphere"
-                            : "old family photographs scattered on table with soft lighting, turquoise accent, cherished memories theme, intimate and gentle, emotional storytelling";
-                    }
+                    specificPrompt = weekMod === 0
+                        ? "vintage photo album open on table, old family photographs scattered around, soft turquoise and grey tones, nostalgic memories theme, gentle natural light, emotional storytelling, timeless moments"
+                        : weekMod === 1
+                        ? "antique wooden memory box with handwritten letters and old photos, soft turquoise accent lighting, tender family heirlooms, legacy and heritage theme, peaceful composition"
+                        : "sunset silhouettes of family walking together on beach, soft turquoise and lavender sky, peaceful togetherness, timeless connection, serene hopeful atmosphere, emotional journey";
                 }
                 
-                // DAISY CHAIN - Soft wellness, natural
+                // DAISY CHAIN - Focus on FLOWERS and NATURE
                 else if (projectId === 'daisy-chain') {
-                    if (contentLower.includes('monday') || contentLower.includes('slow')) {
-                        specificPrompt = "extreme close-up single white daisy with morning dew drops on petals, soft blue-grey background, macro nature photography, peaceful simplicity, golden hour soft light, mindful meditative aesthetic";
-                    } else if (contentLower.includes('poll') || contentLower.includes('wellness')) {
-                        specificPrompt = "field of white daisies gently swaying in breeze, shallow depth of field, soft blue sky backdrop, peaceful natural wellness setting, serene pastoral scene, calming composition";
-                    } else if (contentLower.includes('rest') || contentLower.includes('weekend')) {
-                        specificPrompt = "single daisy in vintage glass bottle on windowsill, soft natural window light, minimalist composition, peaceful wellness aesthetic, gentle blue-grey tones, contemplative restful mood";
-                    } else {
-                        specificPrompt = "daisy wreath on soft blue fabric, natural beauty, peaceful wellness theme, soft focus photography, gentle aesthetic, mindful living visual";
-                    }
+                    specificPrompt = weekMod === 0
+                        ? "extreme macro close-up of single white daisy with morning dew drops, soft blue-grey background, perfect petals, peaceful simplicity, golden hour soft light, botanical photography, mindful aesthetic"
+                        : weekMod === 1
+                        ? "field of white daisies swaying gently in breeze, shallow depth of field, soft blue sky, peaceful natural setting, serene pastoral scene, calming wellness vibe, dreamy composition"
+                        : "single white daisy in clear glass vase on white windowsill, soft natural window light, minimalist Scandinavian aesthetic, peaceful wellness theme, gentle blue-grey tones, contemplative mood";
                 }
                 
-                const platformStyle = platform === 'Instagram' ? "square 1:1 composition, Instagram optimized" : "landscape 16:9 composition, LinkedIn optimized";
+                const platformStyle = platform === 'Instagram' ? "square 1:1 format, Instagram-ready" : "landscape 16:9 format, LinkedIn-optimized";
+                
+                const qualityModifiers = "no people, no hands, no faces, no text overlay, no watermarks, photorealistic, studio quality, commercial use ready";
                 
                 // Unique seed for each post
                 const seed = weekNumber * 1000 + Math.abs(postContent.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0));
                 
-                return `${baseStyle}${specificPrompt}, ${platformStyle}, no AI-generated text overlay, modern 2026 social media trends, visually stunning, seed:${seed}`;
+                return `${baseStyle}${specificPrompt}, ${platformStyle}, ${qualityModifiers}, seed:${seed}`;
             };
 
             const generatePrompt = () => {
