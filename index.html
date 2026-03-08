@@ -33,6 +33,7 @@
                 'daisy-chain': '',
                 'time-for-class': ''
             });
+            const [lockedImages, setLockedImages] = useState({});
 
             const projects = [
                 { id: 'podcast-pal', name: 'Podcast Pal', color: 'blue' },
@@ -54,7 +55,7 @@
                 }
             };
 
-            const generateImages = async () => {
+            const generateImages = async (forceNew = false) => {
                 if (!generatedContent) return;
                 
                 setGeneratingImages(true);
@@ -74,11 +75,20 @@
                         if (projectData.social) {
                             for (let i = 0; i < projectData.social.length; i++) {
                                 const post = projectData.social[i];
+                                const imageKey = `${projectId}-${i}`;
+                                
+                                // Skip locked images
+                                if (lockedImages[imageKey]) {
+                                    generatedCount++;
+                                    setImageProgress(`Skipping locked image ${generatedCount} of ${totalPosts}...`);
+                                    continue;
+                                }
+                                
                                 generatedCount++;
                                 setImageProgress(`Generating image ${generatedCount} of ${totalPosts}...`);
                                 
                                 // Create prompt from post content
-                                const imagePrompt = createImagePrompt(projectId, post.content, post.platform);
+                                const imagePrompt = createImagePrompt(projectId, post.content, post.platform, forceNew);
                                 
                                 // Pollinations.ai uses a simple URL structure - much easier!
                                 const encodedPrompt = encodeURIComponent(imagePrompt);
@@ -95,7 +105,7 @@
                     
                     setGeneratedContent(updatedContent);
                     setImageProgress('');
-                    alert('✅ Images generated! Scroll through your posts to see them.');
+                    alert('✅ Images generated! Locked images were kept.');
                 } catch (error) {
                     alert('Error generating images: ' + error.message);
                 } finally {
@@ -103,15 +113,23 @@
                 }
             };
             
-            const createImagePrompt = (projectId, postContent, platform) => {
+            const toggleImageLock = (projectId, postIndex) => {
+                const imageKey = `${projectId}-${postIndex}`;
+                setLockedImages(prev => ({
+                    ...prev,
+                    [imageKey]: !prev[imageKey]
+                }));
+            };
+            
+            const createImagePrompt = (projectId, postContent, platform, forceNew = false) => {
                 const baseStyle = "ultra high quality, professional photography, 2026 social media aesthetic, trending visual style, ";
                 
                 // Extract key themes from caption for intentional matching
                 const contentLower = postContent.toLowerCase();
                 
-                // Weekly rotation for variety
+                // Use random seed if regenerating, otherwise use week number
                 const now = new Date();
-                const weekNumber = Math.floor((now - new Date(now.getFullYear(), 0, 1)) / 604800000);
+                const weekNumber = forceNew ? Math.floor(Math.random() * 10000) : Math.floor((now - new Date(now.getFullYear(), 0, 1)) / 604800000);
                 const weekMod = weekNumber % 3;
                 
                 let specificPrompt = "";
@@ -601,12 +619,21 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                             </div>
                             <div className="space-x-4">
                                 <button
-                                    onClick={generateImages}
+                                    onClick={() => generateImages(false)}
                                     disabled={generatingImages}
                                     className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300"
                                 >
                                     {generatingImages ? `⏳ ${imageProgress}` : '🎨 Generate Images (Free)'}
                                 </button>
+                                {generatedContent && (
+                                    <button
+                                        onClick={() => generateImages(true)}
+                                        disabled={generatingImages}
+                                        className="bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-700 disabled:bg-gray-300"
+                                    >
+                                        🔄 Regenerate Images
+                                    </button>
+                                )}
                                 {apiKeys.buffer && (
                                     <button
                                         onClick={scheduleInstagram}
@@ -671,31 +698,48 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                         {content.social && (
                                             <div className="mb-4">
                                                 <h3 className="font-semibold mb-2">📱 Social Posts</h3>
-                                                {content.social.map((post, i) => (
-                                                    <div key={i} className="bg-gray-50 p-3 rounded mb-2">
-                                                        <div className="flex justify-between text-xs text-gray-600 mb-1">
-                                                            <span>{post.platform}</span>
-                                                            <span>{post.scheduledDay}</span>
+                                                {content.social.map((post, i) => {
+                                                    const imageKey = `${project.id}-${i}`;
+                                                    const isLocked = lockedImages[imageKey];
+                                                    
+                                                    return (
+                                                        <div key={i} className="bg-gray-50 p-3 rounded mb-2">
+                                                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                                                <span>{post.platform}</span>
+                                                                <span>{post.scheduledDay}</span>
+                                                            </div>
+                                                            {post.imageUrl && (
+                                                                <div className="relative">
+                                                                    <img 
+                                                                        src={post.imageUrl} 
+                                                                        alt="Generated social media image" 
+                                                                        className={`w-full h-48 object-cover rounded mb-2 ${isLocked ? 'border-4 border-green-500' : ''}`}
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => toggleImageLock(project.id, i)}
+                                                                        className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-semibold ${
+                                                                            isLocked 
+                                                                                ? 'bg-green-600 text-white' 
+                                                                                : 'bg-white text-gray-700 border border-gray-300'
+                                                                        }`}
+                                                                    >
+                                                                        {isLocked ? '🔒 Locked' : '🔓 Unlock'}
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            <div className="text-sm line-clamp-3">{post.content}</div>
+                                                            {post.imageUrl && (
+                                                                <a 
+                                                                    href={post.imageUrl} 
+                                                                    download={`${project.id}-${post.platform}-${post.scheduledDay}.png`}
+                                                                    className="text-xs text-blue-600 hover:underline mt-2 block"
+                                                                >
+                                                                    💾 Download Image
+                                                                </a>
+                                                            )}
                                                         </div>
-                                                        {post.imageUrl && (
-                                                            <img 
-                                                                src={post.imageUrl} 
-                                                                alt="Generated social media image" 
-                                                                className="w-full h-48 object-cover rounded mb-2"
-                                                            />
-                                                        )}
-                                                        <div className="text-sm line-clamp-3">{post.content}</div>
-                                                        {post.imageUrl && (
-                                                            <a 
-                                                                href={post.imageUrl} 
-                                                                download={`${project.id}-${post.platform}-${post.scheduledDay}.png`}
-                                                                className="text-xs text-blue-600 hover:underline mt-2 block"
-                                                            >
-                                                                💾 Download Image
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         )}
 
