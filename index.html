@@ -17,7 +17,6 @@
 
         const AutomationHub = () => {
             const [apiKeys, setApiKeys] = useState({
-                brevo: '',
                 buffer: ''
             });
             const [generatedContent, setGeneratedContent] = useState(null);
@@ -28,6 +27,8 @@
             const [showManualImport, setShowManualImport] = useState(false);
             const [generatingImages, setGeneratingImages] = useState(false);
             const [imageProgress, setImageProgress] = useState('');
+            
+            const INSTAGRAM_PROFILE_ID = 'nUvQZNCxWWg0OjpJmQPeXemJWB_CfD_ihb8UMEeyuD_';
 
             const projects = [
                 { id: 'podcast-pal', name: 'Podcast Pal', color: 'blue' },
@@ -99,21 +100,102 @@
             };
             
             const createImagePrompt = (projectId, postContent, platform) => {
-                const baseStyle = "professional social media graphic, modern design, clean aesthetic, high quality, ";
+                const baseStyle = "ultra high quality, professional photography, 2026 social media aesthetic, trending visual style, ";
                 
-                const projectStyles = {
-                    'podcast-pal': "blue and white color scheme, international students connecting via technology, global collaboration, modern educational setting, microphones and podcasting equipment, diverse students from different countries",
-                    'breaking-cycle': "soft warm tones, healing journey aesthetic, emotional growth, personal transformation, gentle strength, hopeful and authentic, peaceful contemplation",
-                    'ai-bots': "green and technology themed, educational AI interface, digital learning tools, friendly robot assistant, modern classroom technology, innovation in teaching",
-                    'consultancy': "professional educational branding, teacher training environment, modern workspace, educational consulting, clean corporate aesthetic, yellow and grey accents",
-                    'echoes': "soft pink and lavender tones, cherished family memories, gentle remembrance, peaceful legacy, heartfelt connections, timeless love and remembrance",
-                    'daisy-chain': "white daisies in natural light, peaceful wellness aesthetic, mindful living, morning dew on flowers, calm nature scene, soft focus photography, gentle sunlight"
-                };
+                // Extract key themes from caption for intentional matching
+                const contentLower = postContent.toLowerCase();
                 
-                const projectStyle = projectStyles[projectId] || "modern professional clean design";
-                const platformStyle = platform === 'Instagram' ? "square composition 1:1" : "landscape composition 16:9";
+                // Weekly rotation for variety
+                const now = new Date();
+                const weekNumber = Math.floor((now - new Date(now.getFullYear(), 0, 1)) / 604800000);
+                const weekMod = weekNumber % 3;
                 
-                return `${baseStyle}${projectStyle}, ${platformStyle}, no text overlay, photorealistic, professional quality`;
+                let specificPrompt = "";
+                
+                // PODCAST PAL - Green branding, international collaboration
+                if (projectId === 'podcast-pal') {
+                    if (contentLower.includes('student') && contentLower.includes('confidence')) {
+                        specificPrompt = "diverse students collaborating with headphones and laptops, bright lime green accent wall, international flags, modern educational space, natural light, authentic candid moment, professional education photography";
+                    } else if (contentLower.includes('curriculum') || contentLower.includes('toolkit')) {
+                        specificPrompt = "sleek podcast microphone on desk with green plant, modern minimalist workspace, lime green accents, educational materials visible, clean professional aesthetic, soft natural lighting";
+                    } else {
+                        specificPrompt = weekMod === 0 
+                            ? "international video call on laptop screen, diverse students waving, green themed workspace, modern tech aesthetic, warm authentic moment"
+                            : weekMod === 1
+                            ? "professional podcast recording setup, lime green soundproofing, modern studio, headphones and mic, educational tech theme"
+                            : "global collaboration concept, world map with green connecting lines, modern educational technology, inspiring and professional";
+                    }
+                }
+                
+                // BREAKING THE CYCLE - Dark dramatic, healing journey
+                else if (projectId === 'breaking-cycle') {
+                    if (contentLower.includes('pattern') || contentLower.includes('heal')) {
+                        specificPrompt = "rusty old chain breaking apart in dramatic lighting, dark brown background with warm golden glow, powerful healing metaphor, cinematic high contrast, textured and raw";
+                    } else if (contentLower.includes('episode 1') || contentLower.includes('live')) {
+                        specificPrompt = "open journal on dark wooden table with pen, soft candlelight, handwritten healing words faintly visible, warm brown and cream tones, intimate contemplative mood, cozy aesthetic";
+                    } else {
+                        specificPrompt = weekMod === 0
+                            ? "single person walking away from darkness toward warm sunrise, silhouette, healing journey visual metaphor, hope and transformation, cinematic dramatic lighting"
+                            : weekMod === 1  
+                            ? "broken chains transformed into blooming wildflowers, dark background with golden light, healing and growth symbolism, beautiful artistic composition"
+                            : "pathway splitting in misty forest, choosing new direction, soft morning light, personal transformation metaphor, peaceful determination, atmospheric and hopeful";
+                    }
+                }
+                
+                // AI BOTS - Green tech, friendly educational
+                else if (projectId === 'ai-bots') {
+                    if (contentLower.includes('student') && contentLower.includes('embarrassed')) {
+                        specificPrompt = "friendly AI interface on laptop screen helping student, soft green glow, cozy educational setting, warm encouraging atmosphere, modern classroom, authentic candid moment";
+                    } else if (contentLower.includes('support') || contentLower.includes('diverse')) {
+                        specificPrompt = "holographic green AI neural network floating above desk, educational icons, modern technology meets teaching, futuristic yet approachable, inspiring innovation, clean aesthetic";
+                    } else {
+                        specificPrompt = "teacher and student collaborating with tablet showing educational AI app, green accent lighting, modern bright classroom, natural interaction, professional education photography";
+                    }
+                }
+                
+                // CONSULTANCY - Professional yellow/grey
+                else if (projectId === 'consultancy') {
+                    if (contentLower.includes('training') || contentLower.includes('staff')) {
+                        specificPrompt = "professional educators in training workshop, modern conference room, yellow accent wall, collaborative engagement, natural light, contemporary corporate aesthetic, authentic interaction";
+                    } else if (contentLower.includes('curriculum') || contentLower.includes('consultation')) {
+                        specificPrompt = "organized educational planning materials on modern desk, yellow folders and notebooks, overhead flat lay shot, clean professional workspace, minimalist aesthetic";
+                    } else {
+                        specificPrompt = "diverse teachers collaborating around whiteboard, modern school setting, yellow decor accents, professional development atmosphere, warm natural lighting, engaging moment";
+                    }
+                }
+                
+                // ECHOES - Soft turquoise, gentle legacy
+                else if (projectId === 'echoes') {
+                    if (contentLower.includes('legacy') || contentLower.includes('record')) {
+                        specificPrompt = "elderly hands gently holding young child's hands, soft turquoise lighting, tender multi-generational moment, emotional family photography, loving connection, peaceful and heartfelt";
+                    } else if (contentLower.includes('grandmother') || contentLower.includes('memory')) {
+                        specificPrompt = "vintage photo album pages being turned, soft focus, turquoise and grey color tones, nostalgic family memories, timeless moments, gentle and peaceful composition";
+                    } else {
+                        specificPrompt = weekMod === 0
+                            ? "family silhouettes walking together at sunset, soft turquoise and lavender sky, generations united, peaceful legacy theme, serene hopeful atmosphere"
+                            : "old family photographs scattered on table with soft lighting, turquoise accent, cherished memories theme, intimate and gentle, emotional storytelling";
+                    }
+                }
+                
+                // DAISY CHAIN - Soft wellness, natural
+                else if (projectId === 'daisy-chain') {
+                    if (contentLower.includes('monday') || contentLower.includes('slow')) {
+                        specificPrompt = "extreme close-up single white daisy with morning dew drops on petals, soft blue-grey background, macro nature photography, peaceful simplicity, golden hour soft light, mindful meditative aesthetic";
+                    } else if (contentLower.includes('poll') || contentLower.includes('wellness')) {
+                        specificPrompt = "field of white daisies gently swaying in breeze, shallow depth of field, soft blue sky backdrop, peaceful natural wellness setting, serene pastoral scene, calming composition";
+                    } else if (contentLower.includes('rest') || contentLower.includes('weekend')) {
+                        specificPrompt = "single daisy in vintage glass bottle on windowsill, soft natural window light, minimalist composition, peaceful wellness aesthetic, gentle blue-grey tones, contemplative restful mood";
+                    } else {
+                        specificPrompt = "daisy wreath on soft blue fabric, natural beauty, peaceful wellness theme, soft focus photography, gentle aesthetic, mindful living visual";
+                    }
+                }
+                
+                const platformStyle = platform === 'Instagram' ? "square 1:1 composition, Instagram optimized" : "landscape 16:9 composition, LinkedIn optimized";
+                
+                // Unique seed for each post
+                const seed = weekNumber * 1000 + Math.abs(postContent.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0));
+                
+                return `${baseStyle}${specificPrompt}, ${platformStyle}, no AI-generated text overlay, modern 2026 social media trends, visually stunning, seed:${seed}`;
             };
 
             const generatePrompt = () => {
@@ -201,85 +283,90 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                 alert('✅ Prompt copied to clipboard!\n\nNow:\n1. Go to Claude.ai\n2. Paste this prompt\n3. Copy Claude\'s JSON response\n4. Come back here and click "Import Content"');
             };
 
-            const scheduleAll = async () => {
+            const scheduleInstagram = async () => {
+                if (!apiKeys.buffer) {
+                    alert('⚠️ Please add your Buffer API key first!\n\nGo to Settings and paste your Buffer API key.');
+                    return;
+                }
+                
                 setIsScheduling(true);
+                
                 try {
-                    // Schedule emails via Brevo
-                    const allEmails = [];
-                    Object.entries(generatedContent).forEach(([project, data]) => {
-                        if (data.emails) {
-                            data.emails.forEach(email => {
-                                allEmails.push({
-                                    project,
-                                    ...email
-                                });
+                    // Collect all Instagram posts
+                    const instagramPosts = [];
+                    Object.entries(generatedContent).forEach(([projectId, projectData]) => {
+                        if (projectData.social) {
+                            projectData.social.forEach(post => {
+                                if (post.platform === 'Instagram') {
+                                    instagramPosts.push({
+                                        ...post,
+                                        projectId
+                                    });
+                                }
                             });
                         }
                     });
-
-                    for (const email of allEmails) {
-                        await fetch('https://api.brevo.com/v3/smtp/email', {
-                            method: 'POST',
-                            headers: {
-                                'accept': 'application/json',
-                                'api-key': apiKeys.brevo,
-                                'content-type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                sender: { email: 'margaret@timeforclass.co.uk', name: 'Margaret - Time For Class' },
-                                to: [{ email: 'margaret@timeforclass.co.uk' }], // Replace with actual list
-                                subject: email.subject,
-                                htmlContent: email.body.replace(/\n/g, '<br>')
-                            })
-                        });
+                    
+                    if (instagramPosts.length === 0) {
+                        alert('No Instagram posts found to schedule!');
+                        setIsScheduling(false);
+                        return;
                     }
-
-                    // Schedule social posts via Buffer
-                    const allSocial = [];
-                    Object.entries(generatedContent).forEach(([project, data]) => {
-                        if (data.social) {
-                            data.social.forEach(post => {
-                                allSocial.push({
-                                    project,
-                                    ...post
-                                });
-                            });
-                        }
-                    });
-
-                    const dayToDate = (day) => {
-                        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-                        const today = new Date();
-                        const currentDay = today.getDay();
-                        const targetDay = days.indexOf(day) + 1;
-                        const daysUntil = (targetDay - currentDay + 7) % 7;
-                        const targetDate = new Date(today);
-                        targetDate.setDate(today.getDate() + daysUntil);
-                        targetDate.setHours(10, 0, 0, 0);
-                        return Math.floor(targetDate.getTime() / 1000);
-                    };
-
-                    for (const post of allSocial) {
-                        await fetch('https://api.bufferapp.com/1/updates/create.json', {
+                    
+                    // Schedule each post
+                    let scheduled = 0;
+                    for (const post of instagramPosts) {
+                        const scheduledTime = getScheduledTime(post.scheduledDay);
+                        
+                        // Buffer Instagram posts require media URL to be included
+                        const postText = post.imageUrl 
+                            ? `${post.content}\n\n[Image: ${post.imageUrl}]`
+                            : post.content;
+                        
+                        const response = await fetch('https://api.bufferapp.com/1/updates/create.json', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
                                 access_token: apiKeys.buffer,
-                                text: post.content,
-                                profile_ids: ['PROFILE_ID'], // User needs to add their Buffer profile IDs
-                                scheduled_at: dayToDate(post.scheduledDay)
+                                text: postText,
+                                profile_ids: [INSTAGRAM_PROFILE_ID],
+                                scheduled_at: scheduledTime
                             })
                         });
+                        
+                        if (response.ok) {
+                            scheduled++;
+                        }
+                        
+                        // Small delay to avoid rate limiting
+                        await new Promise(resolve => setTimeout(resolve, 500));
                     }
-
-                    alert('✅ All content scheduled successfully!');
+                    
+                    alert(`✅ Success! Scheduled ${scheduled} Instagram posts via Buffer.\n\nThey'll post automatically throughout the week!`);
+                    
                 } catch (error) {
-                    alert('Error scheduling: ' + error.message + '\n\nNote: You may need to configure email recipients and Buffer profile IDs in the code.');
+                    alert('Error scheduling Instagram posts:\n\n' + error.message + '\n\nMake sure:\n1. Buffer API key is correct\n2. Instagram is connected to Buffer\n3. You have available posting slots');
                 } finally {
                     setIsScheduling(false);
                 }
+            };
+            
+            const getScheduledTime = (day) => {
+                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                const today = new Date();
+                const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                const targetDay = days.indexOf(day) + 1; // Convert to 1-7 where Monday = 1
+                
+                let daysUntil = (targetDay - currentDay + 7) % 7;
+                if (daysUntil === 0) daysUntil = 7; // If today, schedule for next week
+                
+                const targetDate = new Date(today);
+                targetDate.setDate(today.getDate() + daysUntil);
+                targetDate.setHours(10, 0, 0, 0); // 10 AM
+                
+                return Math.floor(targetDate.getTime() / 1000);
             };
 
             const downloadContent = () => {
@@ -329,39 +416,37 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                         ✅ I Got Claude's Response - Import Content
                                     </button>
 
-                                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                                        <h3 className="font-semibold mb-2">Optional: Auto-Scheduling</h3>
-                                        <p className="text-sm text-gray-600 mb-3">Want to auto-schedule emails and social posts? Add API keys:</p>
+                                    <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                        <h3 className="font-semibold text-blue-800 mb-2">📱 Optional: Instagram Auto-Posting</h3>
+                                        <p className="text-sm text-blue-700 mb-3">Want Instagram posts to auto-schedule? Add your Buffer API key:</p>
                                         
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label className="block text-xs font-medium mb-1">
-                                                    Brevo API Key (free email automation)
-                                                    <a href="https://app.brevo.com/settings/keys/api" target="_blank" className="text-blue-600 ml-2">(Get here)</a>
-                                                </label>
-                                                <input
-                                                    type="password"
-                                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                                                    placeholder="xkeysib-..."
-                                                    value={apiKeys.brevo}
-                                                    onChange={(e) => setApiKeys({...apiKeys, brevo: e.target.value})}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-xs font-medium mb-1">
-                                                    Buffer API Key (free social automation)
-                                                    <a href="https://account.buffer.com/developers" target="_blank" className="text-blue-600 ml-2">(Get here)</a>
-                                                </label>
-                                                <input
-                                                    type="password"
-                                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                                                    placeholder="1/..."
-                                                    value={apiKeys.buffer}
-                                                    onChange={(e) => setApiKeys({...apiKeys, buffer: e.target.value})}
-                                                />
-                                            </div>
+                                        <div>
+                                            <label className="block text-xs font-medium mb-1">
+                                                Buffer API Key
+                                                <a href="https://account.buffer.com/developers" target="_blank" className="text-blue-600 ml-2">(Get here)</a>
+                                            </label>
+                                            <input
+                                                type="password"
+                                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-2"
+                                                placeholder="1/..."
+                                                value={apiKeys.buffer}
+                                                onChange={(e) => setApiKeys({...apiKeys, buffer: e.target.value})}
+                                            />
+                                            <p className="text-xs text-blue-600">
+                                                ✅ Connect Instagram to Buffer first, then paste your API key here
+                                            </p>
                                         </div>
+                                    </div>
+
+                                    <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                                        <h3 className="font-semibold text-yellow-800 mb-2">📝 Manual Workflow</h3>
+                                        <p className="text-sm text-yellow-700">After importing content:</p>
+                                        <ul className="text-xs text-yellow-600 mt-2 space-y-1 list-disc list-inside">
+                                            <li>Generate images (30-60 seconds)</li>
+                                            <li>Schedule Instagram (if Buffer connected)</li>
+                                            <li>Copy LinkedIn posts + download images</li>
+                                            <li>Copy email drafts → paste into IONOS/Gmail</li>
+                                        </ul>
                                     </div>
                                 </div>
                             ) : (
@@ -415,21 +500,21 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                 >
                                     {generatingImages ? `⏳ ${imageProgress}` : '🎨 Generate Images (Free)'}
                                 </button>
+                                {apiKeys.buffer && (
+                                    <button
+                                        onClick={scheduleInstagram}
+                                        disabled={isScheduling}
+                                        className="bg-pink-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-pink-700 disabled:bg-gray-300"
+                                    >
+                                        {isScheduling ? '⏳ Scheduling...' : '📱 Schedule Instagram Posts'}
+                                    </button>
+                                )}
                                 <button
                                     onClick={downloadContent}
                                     className="bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-700"
                                 >
                                     📥 Download JSON
                                 </button>
-                                {apiKeys.brevo && apiKeys.buffer && (
-                                    <button
-                                        onClick={scheduleAll}
-                                        disabled={isScheduling}
-                                        className="bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-300"
-                                    >
-                                        {isScheduling ? '⏳ Scheduling...' : '🚀 Schedule All'}
-                                    </button>
-                                )}
                                 <button
                                     onClick={() => setShowSetup(true)}
                                     className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700"
@@ -450,11 +535,27 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                         
                                         {content.emails && (
                                             <div className="mb-4">
-                                                <h3 className="font-semibold mb-2">📧 Emails</h3>
+                                                <h3 className="font-semibold mb-2">📧 Email Drafts (Copy & Send Manually)</h3>
                                                 {content.emails.map((email, i) => (
-                                                    <div key={i} className="bg-gray-50 p-3 rounded mb-2">
-                                                        <div className="font-medium text-sm">{email.subject}</div>
-                                                        <div className="text-xs text-gray-600 mt-1 line-clamp-2">{email.body}</div>
+                                                    <div key={i} className="bg-yellow-50 border border-yellow-200 p-4 rounded mb-3">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <div className="font-medium text-sm text-gray-800">Subject: {email.subject}</div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(`Subject: ${email.subject}\n\n${email.body}`);
+                                                                    alert('✅ Email copied! Paste into IONOS or Gmail.');
+                                                                }}
+                                                                className="text-xs bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700"
+                                                            >
+                                                                📋 Copy Email
+                                                            </button>
+                                                        </div>
+                                                        <div className="text-xs text-gray-700 mt-2 whitespace-pre-wrap bg-white p-3 rounded border border-gray-200 max-h-40 overflow-y-auto">
+                                                            {email.body}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 mt-2 italic">
+                                                            💡 Copy this and paste into IONOS webmail or Gmail
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
