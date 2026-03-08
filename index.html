@@ -90,9 +90,12 @@
                                 // Create prompt from post content
                                 const imagePrompt = createImagePrompt(projectId, post.content, post.platform, forceNew);
                                 
+                                // Add timestamp to force fresh loads
+                                const timestamp = Date.now();
+                                
                                 // Pollinations.ai uses a simple URL structure - much easier!
                                 const encodedPrompt = encodeURIComponent(imagePrompt);
-                                const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=1200&nologo=true`;
+                                const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=1200&nologo=true&seed=${timestamp}`;
                                 
                                 // Store the image URL
                                 post.imageUrl = imageUrl;
@@ -119,6 +122,12 @@
                     ...prev,
                     [imageKey]: !prev[imageKey]
                 }));
+            };
+            
+            const refreshImages = () => {
+                // Force re-render by creating a new copy of content
+                setGeneratedContent({...generatedContent});
+                alert('✅ Images refreshed! They should load now.');
             };
             
             const createImagePrompt = (projectId, postContent, platform, forceNew = false) => {
