@@ -100,8 +100,9 @@
                                 // Store the image URL
                                 post.imageUrl = imageUrl;
                                 
-                                // Small delay to be respectful of the free service
-                                await new Promise(resolve => setTimeout(resolve, 500));
+                                // IMPORTANT: Longer delay to avoid rate limiting on free tier
+                                // Pollinations free tier only allows 1 image at a time
+                                await new Promise(resolve => setTimeout(resolve, 3000)); // 3 seconds between each image
                             }
                         }
                     }
