@@ -26,6 +26,8 @@
             const [showSetup, setShowSetup] = useState(true);
             const [manualContent, setManualContent] = useState('');
             const [showManualImport, setShowManualImport] = useState(false);
+            const [generatingImages, setGeneratingImages] = useState(false);
+            const [imageProgress, setImageProgress] = useState('');
 
             const projects = [
                 { id: 'podcast-pal', name: 'Podcast Pal', color: 'blue' },
@@ -47,8 +49,75 @@
                 }
             };
 
+            const generateImages = async () => {
+                if (!generatedContent) return;
+                
+                setGeneratingImages(true);
+                const updatedContent = JSON.parse(JSON.stringify(generatedContent));
+                
+                try {
+                    let totalPosts = 0;
+                    let generatedCount = 0;
+                    
+                    // Count total social posts
+                    Object.values(generatedContent).forEach(project => {
+                        if (project.social) totalPosts += project.social.length;
+                    });
+                    
+                    // Generate images for each social post
+                    for (const [projectId, projectData] of Object.entries(updatedContent)) {
+                        if (projectData.social) {
+                            for (let i = 0; i < projectData.social.length; i++) {
+                                const post = projectData.social[i];
+                                generatedCount++;
+                                setImageProgress(`Generating image ${generatedCount} of ${totalPosts}...`);
+                                
+                                // Create prompt from post content
+                                const imagePrompt = createImagePrompt(projectId, post.content, post.platform);
+                                
+                                // Pollinations.ai uses a simple URL structure - much easier!
+                                const encodedPrompt = encodeURIComponent(imagePrompt);
+                                const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1200&height=1200&nologo=true`;
+                                
+                                // Store the image URL
+                                post.imageUrl = imageUrl;
+                                
+                                // Small delay to be respectful of the free service
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                            }
+                        }
+                    }
+                    
+                    setGeneratedContent(updatedContent);
+                    setImageProgress('');
+                    alert('✅ Images generated! Scroll through your posts to see them.');
+                } catch (error) {
+                    alert('Error generating images: ' + error.message);
+                } finally {
+                    setGeneratingImages(false);
+                }
+            };
+            
+            const createImagePrompt = (projectId, postContent, platform) => {
+                const baseStyle = "professional social media graphic, modern design, clean aesthetic, high quality, ";
+                
+                const projectStyles = {
+                    'podcast-pal': "blue and white color scheme, international students connecting via technology, global collaboration, modern educational setting, microphones and podcasting equipment, diverse students from different countries",
+                    'breaking-cycle': "soft warm tones, healing journey aesthetic, emotional growth, personal transformation, gentle strength, hopeful and authentic, peaceful contemplation",
+                    'ai-bots': "green and technology themed, educational AI interface, digital learning tools, friendly robot assistant, modern classroom technology, innovation in teaching",
+                    'consultancy': "professional educational branding, teacher training environment, modern workspace, educational consulting, clean corporate aesthetic, yellow and grey accents",
+                    'echoes': "soft pink and lavender tones, cherished family memories, gentle remembrance, peaceful legacy, heartfelt connections, timeless love and remembrance",
+                    'daisy-chain': "white daisies in natural light, peaceful wellness aesthetic, mindful living, morning dew on flowers, calm nature scene, soft focus photography, gentle sunlight"
+                };
+                
+                const projectStyle = projectStyles[projectId] || "modern professional clean design";
+                const platformStyle = platform === 'Instagram' ? "square composition 1:1" : "landscape composition 16:9";
+                
+                return `${baseStyle}${projectStyle}, ${platformStyle}, no text overlay, photorealistic, professional quality`;
+            };
+
             const generatePrompt = () => {
-                const prompt = `Generate a week's worth of content for my 6 business projects. Return ONLY valid JSON in this exact structure:
+                const prompt = `Generate a week's worth of content for Margaret's 6 business projects. Return ONLY valid JSON in this exact structure:
 
 {
   "podcast-pal": {
@@ -56,7 +125,6 @@
     "social": [{"platform": "LinkedIn", "content": "...", "scheduledDay": "Monday"}]
   },
   "breaking-cycle": {
-    "podcast": {"title": "...", "outline": "..."},
     "social": [{"platform": "Instagram", "content": "...", "scheduledDay": "Wednesday"}]
   },
   "ai-bots": {
@@ -65,7 +133,7 @@
   },
   "consultancy": {
     "emails": [{"subject": "...", "body": "..."}],
-    "resources": "..."
+    "ideas": "..."
   },
   "echoes": {
     "emails": [{"subject": "B2B Partnership Pitch", "body": "..."}],
@@ -73,22 +141,61 @@
   },
   "daisy-chain": {
     "social": [
-      {"platform": "Instagram", "content": "Voice note script...", "scheduledDay": "Monday"},
+      {"platform": "Instagram", "content": "Visual post concept...", "scheduledDay": "Monday"},
       {"platform": "Instagram", "content": "...", "scheduledDay": "Wednesday"},
       {"platform": "Instagram", "content": "...", "scheduledDay": "Friday"}
     ]
   }
 }
 
-Guidelines:
-- Podcast Pal: 1 newsletter email, 3 LinkedIn posts about international student podcasting
-- Breaking the Cycle: Next episode outline, 3 Instagram promo posts
-- AI Bots: Bot improvement notes, 2 LinkedIn posts about AI in education
-- Consultancy: 1 client outreach email, TES resource ideas
-- Echoes: 1 B2B pitch to hospices/funeral directors, 2 LinkedIn thought leadership posts
-- Daisy Chain: 3 Instagram voice note scripts (natural products, wellness, slow living themes)
+CRITICAL - DO NOT MENTION:
+❌ Wales (except in Echoes B2B context if relevant)
+❌ NOS / National Online School / TCES
+❌ "Where We Belong" podcast
+❌ Benny or any NOS students
+❌ PBL/Project-Based Learning (this is separate work)
 
-Make content authentic to Margaret's voice: warm, educational, inclusion-focused, "Different abilities, endless possibilities"`;
+PROJECT GUIDELINES:
+
+PODCAST PAL:
+- 1 newsletter email to schools (B2B pitch)
+- 3 LinkedIn posts about international student podcasting exchange
+- Focus: School partnerships, cultural exchange, global citizenship
+- Complete 8-week curriculum toolkit
+- Email will be sent via IONOS manually (just draft it)
+
+BREAKING THE CYCLE:
+- 3 Instagram posts promoting Episode 1 + teasing Episode 2
+- Theme: Emotional healing, breaking relationship cycles, personal growth
+- Audience growth focus
+- NO new episode outline needed (Episode 2 not recorded yet)
+- Warm, vulnerable, authentic tone
+
+AI BOTS (Time For Class):
+- Update notes for 3 Poe bots: TimeForClass (general teaching), TimeForClass-EAL (English support), TimeForClass-AI (AI literacy)
+- 2 LinkedIn posts about educational AI, bot usage, teacher support
+- NOT about PBL - general education focus
+
+TIME FOR CLASS CONSULTANCY:
+- 1 client outreach email (general education services, NOT PBL-specific)
+- Ideas for new services/offerings
+- Email will be sent via IONOS manually (just draft it)
+- Focus: AI integration, curriculum consultation, teacher training
+
+ECHOES:
+- 1 B2B pitch email to hospices/funeral directors
+- 2 LinkedIn thought leadership posts about digital legacy
+- Email will be sent via Gmail manually (just draft it)
+- Focus: Partnerships, milestone-triggered messages, AI personality modeling
+
+DAISY CHAIN:
+- 3 Instagram visual post concepts (NO voice notes)
+- Ideas for resharing previous content
+- Audience engagement (polls, questions about topics)
+- Theme: Daisies, nature, wellness, slow living, mindfulness
+- Keep consistent aesthetic
+
+TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, endless possibilities" for education content. Vulnerable and real for Breaking the Cycle. Professional for B2B pitches.`;
                 
                 navigator.clipboard.writeText(prompt);
                 alert('✅ Prompt copied to clipboard!\n\nNow:\n1. Go to Claude.ai\n2. Paste this prompt\n3. Copy Claude\'s JSON response\n4. Come back here and click "Import Content"');
@@ -302,6 +409,13 @@ Make content authentic to Margaret's voice: warm, educational, inclusion-focused
                             </div>
                             <div className="space-x-4">
                                 <button
+                                    onClick={generateImages}
+                                    disabled={generatingImages}
+                                    className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300"
+                                >
+                                    {generatingImages ? `⏳ ${imageProgress}` : '🎨 Generate Images (Free)'}
+                                </button>
+                                <button
                                     onClick={downloadContent}
                                     className="bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-700"
                                 >
@@ -355,7 +469,23 @@ Make content authentic to Margaret's voice: warm, educational, inclusion-focused
                                                             <span>{post.platform}</span>
                                                             <span>{post.scheduledDay}</span>
                                                         </div>
+                                                        {post.imageUrl && (
+                                                            <img 
+                                                                src={post.imageUrl} 
+                                                                alt="Generated social media image" 
+                                                                className="w-full h-48 object-cover rounded mb-2"
+                                                            />
+                                                        )}
                                                         <div className="text-sm line-clamp-3">{post.content}</div>
+                                                        {post.imageUrl && (
+                                                            <a 
+                                                                href={post.imageUrl} 
+                                                                download={`${project.id}-${post.platform}-${post.scheduledDay}.png`}
+                                                                className="text-xs text-blue-600 hover:underline mt-2 block"
+                                                            >
+                                                                💾 Download Image
+                                                            </a>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -375,6 +505,13 @@ Make content authentic to Margaret's voice: warm, educational, inclusion-focused
                                             <div className="mb-4">
                                                 <h3 className="font-semibold mb-2">🔧 Updates</h3>
                                                 <div className="bg-gray-50 p-3 rounded text-sm">{content.updates}</div>
+                                            </div>
+                                        )}
+
+                                        {content.ideas && (
+                                            <div className="mb-4">
+                                                <h3 className="font-semibold mb-2">💡 Service Ideas</h3>
+                                                <div className="bg-gray-50 p-3 rounded text-sm">{content.ideas}</div>
                                             </div>
                                         )}
 
