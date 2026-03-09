@@ -29,9 +29,9 @@
             const [imageProgress, setImageProgress] = useState('');
             const [instagramAccounts, setInstagramAccounts] = useState([]);
             const [projectToAccountMap, setProjectToAccountMap] = useState({
+                'podcast-pal': '',
                 'breaking-cycle': '',
-                'daisy-chain': '',
-                'time-for-class': ''
+                'daisy-chain': ''
             });
             const [lockedImages, setLockedImages] = useState({});
 
@@ -63,13 +63,13 @@
                 
                 try {
                     let totalPosts = 0;
-                    let generatedCount = 0;
                     
-                    // Count total social posts that need images
+                    // Count posts
                     Object.values(generatedContent).forEach(project => {
                         if (project.social) {
                             project.social.forEach((post, i) => {
-                                const imageKey = `${project.id || Object.keys(generatedContent).find(k => generatedContent[k] === project)}-${i}`;
+                                const projectId = Object.keys(generatedContent).find(k => generatedContent[k] === project);
+                                const imageKey = `${projectId}-${i}`;
                                 if (!lockedImages[imageKey]) {
                                     totalPosts++;
                                 }
@@ -77,90 +77,46 @@
                         }
                     });
                     
-                    if (totalPosts === 0) {
-                        alert('All images are locked! Unlock some images to regenerate them.');
-                        setGeneratingImages(false);
-                        return;
-                    }
+                    let count = 0;
                     
-                    const imagePromises = [];
-                    
-                    // Generate images for each social post
+                    // Add placeholder images instantly
                     for (const [projectId, projectData] of Object.entries(updatedContent)) {
                         if (projectData.social) {
                             for (let i = 0; i < projectData.social.length; i++) {
                                 const post = projectData.social[i];
                                 const imageKey = `${projectId}-${i}`;
                                 
-                                // Skip locked images
-                                if (lockedImages[imageKey]) {
-                                    continue;
-                                }
+                                if (lockedImages[imageKey]) continue;
                                 
-                                generatedCount++;
-                                const currentCount = generatedCount;
-                                setImageProgress(`Generating image ${currentCount} of ${totalPosts}... (may take 30-60 seconds total)`);
+                                count++;
+                                setImageProgress(`Adding image ${count} of ${totalPosts}...`);
                                 
-                                // Create detailed prompt from post content
-                                const imagePrompt = createImagePrompt(projectId, post.content, post.platform, forceNew);
+                                // Color-coded placeholders by project
+                                const colors = {
+                                    'podcast-pal': '10b981/ffffff',
+                                    'breaking-cycle': '8b5cf6/ffffff',
+                                    'ai-bots': '06b6d4/ffffff',
+                                    'consultancy': 'f59e0b/ffffff',
+                                    'echoes': 'ec4899/ffffff',
+                                    'daisy-chain': '6366f1/ffffff'
+                                };
                                 
-                                // Use unique timestamp for each image
-                                const timestamp = Date.now() + (currentCount * 1000);
+                                const color = colors[projectId] || '6b7280/ffffff';
+                                const text = encodeURIComponent(`${projectId}\n${post.scheduledDay}`);
                                 
-                                // Pollinations with flux model (better quality)
-                                const encodedPrompt = encodeURIComponent(imagePrompt);
-                                const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&seed=${timestamp}&model=flux&enhance=true&nologo=true`;
-                                
-                                // Create promise to preload image
-                                const imagePromise = new Promise((resolve) => {
-                                    const img = new Image();
-                                    
-                                    // Set timeout to prevent hanging
-                                    const timeout = setTimeout(() => {
-                                        console.log(`Image ${currentCount} timed out, using URL anyway`);
-                                        post.imageUrl = imageUrl;
-                                        resolve();
-                                    }, 15000); // 15 second timeout per image
-                                    
-                                    img.onload = () => {
-                                        clearTimeout(timeout);
-                                        post.imageUrl = imageUrl;
-                                        setImageProgress(`Loaded ${currentCount} of ${totalPosts}...`);
-                                        resolve();
-                                    };
-                                    
-                                    img.onerror = () => {
-                                        clearTimeout(timeout);
-                                        console.log(`Image ${currentCount} failed to load, using URL anyway`);
-                                        post.imageUrl = imageUrl;
-                                        resolve();
-                                    };
-                                    
-                                    img.src = imageUrl;
-                                });
-                                
-                                imagePromises.push(imagePromise);
-                                
-                                // CRITICAL: 3 second delay between starting each image generation
-                                // This prevents Pollinations rate limiting
-                                await new Promise(resolve => setTimeout(resolve, 3000));
+                                // Reliable placeholder service
+                                post.imageUrl = `https://placehold.co/1080x1080/${color}?text=${text}&font=roboto`;
                             }
                         }
                     }
                     
-                    // Wait for all images to load or timeout
-                    setImageProgress(`Finalizing all images... please wait`);
-                    await Promise.all(imagePromises);
-                    
                     setGeneratedContent(updatedContent);
                     setImageProgress('');
-                    alert(`✅ Generated ${totalPosts} images!\n\n${lockedImages && Object.keys(lockedImages).filter(k => lockedImages[k]).length > 0 ? 'Locked images were kept.\n\n' : ''}If any images look bad or didn't load:\n• Click "Upload" to use your own\n• Click "Regenerate" to try again`);
+                    alert(`✅ ${totalPosts} placeholder images added!\n\n💡 Click "📤 Upload" on each post to add your Canva images.\n\nThis is faster and gives you perfect quality!`);
                 } catch (error) {
-                    console.error('Image generation error:', error);
-                    alert('Error generating images: ' + error.message + '\n\nTry clicking "Regenerate Images" or use "Upload" to add your own images.');
+                    alert('Error: ' + error.message);
                 } finally {
                     setGeneratingImages(false);
-                    setImageProgress('');
                 }
             };
             
@@ -365,9 +321,11 @@ PROJECT GUIDELINES:
 PODCAST PAL:
 - 1 newsletter email to schools (B2B pitch)
 - 3 LinkedIn posts about international student podcasting exchange
+- 3 Instagram posts showcasing student podcasting, global connections, cultural exchange
 - Focus: School partnerships, cultural exchange, global citizenship
 - Complete 8-week curriculum toolkit
 - Email will be sent via IONOS manually (just draft it)
+- Instagram: Visual content about student empowerment, international collaboration
 
 BREAKING THE CYCLE:
 - 3 Instagram posts promoting Episode 1 + teasing Episode 2
@@ -480,11 +438,17 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                 }
                 
                 // Check if accounts are mapped
+                const podcastPalAccount = projectToAccountMap['podcast-pal'];
                 const breakingCycleAccount = projectToAccountMap['breaking-cycle'];
                 const daisyChainAccount = projectToAccountMap['daisy-chain'];
                 
-                if (!breakingCycleAccount || !daisyChainAccount) {
-                    alert('⚠️ Please assign Instagram accounts to your projects first!\n\nGo to Settings and select which Instagram account each project should post to.');
+                const missingAccounts = [];
+                if (!podcastPalAccount) missingAccounts.push('Podcast Pal');
+                if (!breakingCycleAccount) missingAccounts.push('Breaking the Cycle');
+                if (!daisyChainAccount) missingAccounts.push('Daisy Chain');
+                
+                if (missingAccounts.length > 0) {
+                    alert(`⚠️ Please assign Instagram accounts for:\n${missingAccounts.join('\n')}\n\nGo to Settings and select which Instagram account each project should post to.`);
                     return;
                 }
                 
@@ -501,7 +465,9 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                     let accountId = '';
                                     
                                     // Map project to Instagram account
-                                    if (projectId === 'breaking-cycle') {
+                                    if (projectId === 'podcast-pal') {
+                                        accountId = podcastPalAccount;
+                                    } else if (projectId === 'breaking-cycle') {
                                         accountId = breakingCycleAccount;
                                     } else if (projectId === 'daisy-chain') {
                                         accountId = daisyChainAccount;
@@ -666,6 +632,22 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                                     <h4 className="font-semibold text-sm mb-3">Assign Instagram Accounts to Projects:</h4>
                                                     
                                                     <div className="space-y-3">
+                                                        <div>
+                                                            <label className="block text-xs font-medium mb-1">Podcast Pal →</label>
+                                                            <select
+                                                                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                                                                value={projectToAccountMap['podcast-pal']}
+                                                                onChange={(e) => setProjectToAccountMap({...projectToAccountMap, 'podcast-pal': e.target.value})}
+                                                            >
+                                                                <option value="">Select Instagram Account</option>
+                                                                {instagramAccounts.map(account => (
+                                                                    <option key={account.id} value={account.id}>
+                                                                        @{account.service_username}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        
                                                         <div>
                                                             <label className="block text-xs font-medium mb-1">Breaking the Cycle →</label>
                                                             <select
