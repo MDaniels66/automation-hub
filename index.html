@@ -413,29 +413,50 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                 }
                 
                 try {
+                    // GraphQL query to get all channels
+                    const query = `
+                        query {
+                            account {
+                                channels {
+                                    id
+                                    name
+                                    service
+                                }
+                            }
+                        }
+                    `;
+                    
                     const response = await fetch('/api/buffer-proxy', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            endpoint: `/1/profiles.json?access_token=${apiKeys.buffer}`,
-                            method: 'GET'
+                            query: query,
+                            token: apiKeys.buffer
                         })
                     });
                     
-                    const data = await response.json();
+                    const result = await response.json();
                     
-                    console.log('Buffer response:', data); // Debug logging
+                    console.log('Buffer GraphQL response:', result);
                     
-                    if (data.error) {
-                        alert('Error from Buffer: ' + JSON.stringify(data.error) + '\n\nRaw response: ' + JSON.stringify(data.rawResponse || 'No raw response'));
+                    if (result.errors) {
+                        alert('Error from Buffer: ' + JSON.stringify(result.errors));
                         return;
                     }
                     
-                    if (response.ok && Array.isArray(data)) {
-                        const igAccounts = data.filter(profile => profile.service === 'instagram');
-                        setInstagramAccounts(igAccounts);
+                    if (result.data && result.data.account && result.data.account.channels) {
+                        const igAccounts = result.data.account.channels.filter(channel => 
+                            channel.service === 'instagram'
+                        );
+                        
+                        // Convert to old format for compatibility
+                        setInstagramAccounts(igAccounts.map(account => ({
+                            id: account.id,
+                            service: 'instagram',
+                            service_username: account.name
+                        })));
                         
                         if (igAccounts.length > 0) {
                             alert(`✅ Found ${igAccounts.length} Instagram account(s)!\n\nNow assign which account each project should post to.`);
@@ -443,9 +464,11 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                             alert('❌ No Instagram accounts found in Buffer.\n\nPlease connect your Instagram accounts to Buffer first.');
                         }
                     } else {
-                        alert('Unexpected response format. Check browser console (F12) for details.\n\nResponse: ' + JSON.stringify(data).substring(0, 200));
+                        alert('Unexpected response. Check console for details.');
+                        console.error('Full response:', result);
                     }
                 } catch (error) {
+                    console.error('Fetch error:', error);
                     alert('Error connecting to Buffer: ' + error.message);
                 }
             };
