@@ -70,9 +70,7 @@
                         if (project.social) totalPosts += project.social.length;
                     });
                     
-                    const imageUrls = [];
-                    
-                    // Generate all image URLs first
+                    // Generate placeholder images for each social post
                     for (const [projectId, projectData] of Object.entries(updatedContent)) {
                         if (projectData.social) {
                             for (let i = 0; i < projectData.social.length; i++) {
@@ -85,49 +83,63 @@
                                 }
                                 
                                 generatedCount++;
-                                setImageProgress(`Generating image ${generatedCount} of ${totalPosts}...`);
+                                setImageProgress(`Adding placeholder ${generatedCount} of ${totalPosts}...`);
                                 
-                                // Create prompt from post content
-                                const imagePrompt = createImagePrompt(projectId, post.content, post.platform, forceNew);
+                                // Get theme color for project
+                                const themeColor = getProjectColor(projectId);
+                                const projectName = getProjectName(projectId);
                                 
-                                try {
-                                    // Call our Hugging Face proxy
-                                    const response = await fetch('/api/generate-image', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({
-                                            prompt: imagePrompt
-                                        })
-                                    });
-                                    
-                                    const data = await response.json();
-                                    
-                                    if (data.success && data.image) {
-                                        post.imageUrl = data.image;
-                                        imageUrls.push(data.image);
-                                    } else {
-                                        console.error('Image generation failed:', data.error);
-                                    }
-                                } catch (error) {
-                                    console.error('Error generating image:', error);
-                                }
+                                // Use placeholder.com for reliable, instant images
+                                const imageUrl = `https://placehold.co/1200x1200/${themeColor}/white?text=${encodeURIComponent(projectName)}`;
                                 
-                                // Small delay between requests
-                                await new Promise(resolve => setTimeout(resolve, 2000));
+                                // Store the image URL
+                                post.imageUrl = imageUrl;
                             }
                         }
                     }
                     
                     setGeneratedContent(updatedContent);
                     setImageProgress('');
-                    alert('✅ Images generated! Locked images were kept.');
+                    alert('✅ Placeholder images added!\n\nClick "Upload Image" on each post to add your own images from Canva or your camera roll.');
                 } catch (error) {
                     alert('Error generating images: ' + error.message);
                 } finally {
                     setGeneratingImages(false);
                 }
+            };
+            
+            const getProjectColor = (projectId) => {
+                const colors = {
+                    'podcast-pal': '22c55e',
+                    'breaking-cycle': '8b5cf6',
+                    'ai-bots': '10b981',
+                    'consultancy': 'eab308',
+                    'echoes': 'ec4899',
+                    'daisy-chain': '6366f1'
+                };
+                return colors[projectId] || '6b7280';
+            };
+            
+            const getProjectName = (projectId) => {
+                const names = {
+                    'podcast-pal': 'Podcast Pal',
+                    'breaking-cycle': 'Breaking the Cycle',
+                    'ai-bots': 'AI Bots',
+                    'consultancy': 'Consultancy',
+                    'echoes': 'Echoes',
+                    'daisy-chain': 'Daisy Chain'
+                };
+                return names[projectId] || 'Social Post';
+            };
+            
+            const uploadImage = (projectId, postIndex, file) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const updatedContent = {...generatedContent};
+                    updatedContent[projectId].social[postIndex].imageUrl = e.target.result;
+                    setGeneratedContent(updatedContent);
+                };
+                reader.readAsDataURL(file);
             };
             
             const toggleImageLock = (projectId, postIndex) => {
@@ -759,19 +771,34 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                                                 <div className="relative">
                                                                     <img 
                                                                         src={post.imageUrl} 
-                                                                        alt="Generated social media image" 
+                                                                        alt="Social media image" 
                                                                         className={`w-full h-48 object-cover rounded mb-2 ${isLocked ? 'border-4 border-green-500' : ''}`}
                                                                     />
-                                                                    <button
-                                                                        onClick={() => toggleImageLock(project.id, i)}
-                                                                        className={`absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                                                                            isLocked 
-                                                                                ? 'bg-green-600 text-white' 
-                                                                                : 'bg-white text-gray-700 border border-gray-300'
-                                                                        }`}
-                                                                    >
-                                                                        {isLocked ? '🔒 Locked' : '🔓 Unlock'}
-                                                                    </button>
+                                                                    <div className="absolute top-2 right-2 space-x-2">
+                                                                        <button
+                                                                            onClick={() => toggleImageLock(project.id, i)}
+                                                                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                                                isLocked 
+                                                                                    ? 'bg-green-600 text-white' 
+                                                                                    : 'bg-white text-gray-700 border border-gray-300'
+                                                                            }`}
+                                                                        >
+                                                                            {isLocked ? '🔒 Locked' : '🔓 Unlock'}
+                                                                        </button>
+                                                                        <label className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white cursor-pointer hover:bg-blue-700">
+                                                                            📤 Upload
+                                                                            <input 
+                                                                                type="file" 
+                                                                                accept="image/*"
+                                                                                className="hidden"
+                                                                                onChange={(e) => {
+                                                                                    if (e.target.files && e.target.files[0]) {
+                                                                                        uploadImage(project.id, i, e.target.files[0]);
+                                                                                    }
+                                                                                }}
+                                                                            />
+                                                                        </label>
+                                                                    </div>
                                                                 </div>
                                                             )}
                                                             <div className="text-sm line-clamp-3">{post.content}</div>
