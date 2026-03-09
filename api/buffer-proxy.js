@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
   );
 
   if (req.method === 'OPTIONS') {
@@ -13,48 +13,41 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { endpoint, method = 'GET', params } = req.body;
+  const { query, variables, token } = req.body;
 
-  if (!endpoint) {
-    return res.status(400).json({ error: 'Missing endpoint parameter' });
+  if (!query || !token) {
+    return res.status(400).json({ error: 'Missing query or token parameter' });
   }
 
   try {
-    let url = `https://api.bufferapp.com${endpoint}`;
-    let options = {
-      method: method,
+    // Buffer's GraphQL endpoint
+    const response = await fetch('https://graph.buffer.com/graphql', {
+      method: 'POST',
       headers: {
-        'Accept': 'application/json'
-      }
-    };
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        query: query,
+        variables: variables || {}
+      })
+    });
 
-    // For POST requests with form data
-    if (method === 'POST' && params) {
-      options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-      options.body = params;
-    }
-
-    const response = await fetch(url, options);
-    const contentType = response.headers.get('content-type');
+    const data = await response.json();
     
-    let data;
-    if (contentType && contentType.includes('application/json')) {
-      data = await response.json();
-    } else {
-      const text = await response.text();
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        data = { error: 'Invalid response from Buffer API', rawResponse: text };
-      }
+    if (!response.ok) {
+      return res.status(response.status).json({ 
+        error: 'GraphQL request failed',
+        details: data
+      });
     }
 
-    res.status(response.status).json(data);
+    res.status(200).json(data);
   } catch (error) {
-    console.error('Buffer proxy error:', error);
+    console.error('Buffer GraphQL proxy error:', error);
     res.status(500).json({ 
       error: error.message,
-      details: 'Failed to connect to Buffer API'
+      details: 'Failed to connect to Buffer GraphQL API'
     });
   }
 }
