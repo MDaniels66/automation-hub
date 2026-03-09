@@ -63,8 +63,9 @@
                 
                 try {
                     let totalPosts = 0;
+                    let generatedCount = 0;
                     
-                    // Count posts
+                    // Count posts needing images
                     Object.values(generatedContent).forEach(project => {
                         if (project.social) {
                             project.social.forEach((post, i) => {
@@ -77,9 +78,15 @@
                         }
                     });
                     
-                    let count = 0;
+                    if (totalPosts === 0) {
+                        alert('All images are locked! Unlock some to regenerate.');
+                        setGeneratingImages(false);
+                        return;
+                    }
                     
-                    // Add placeholder images instantly
+                    const imagePromises = [];
+                    
+                    // Generate with Pollinations AI
                     for (const [projectId, projectData] of Object.entries(updatedContent)) {
                         if (projectData.social) {
                             for (let i = 0; i < projectData.social.length; i++) {
@@ -88,35 +95,61 @@
                                 
                                 if (lockedImages[imageKey]) continue;
                                 
-                                count++;
-                                setImageProgress(`Adding image ${count} of ${totalPosts}...`);
+                                generatedCount++;
+                                setImageProgress(`Generating ${generatedCount} of ${totalPosts}... (takes 1-2 minutes)`);
                                 
-                                // Color-coded placeholders by project
-                                const colors = {
-                                    'podcast-pal': '10b981/ffffff',
-                                    'breaking-cycle': '8b5cf6/ffffff',
-                                    'ai-bots': '06b6d4/ffffff',
-                                    'consultancy': 'f59e0b/ffffff',
-                                    'echoes': 'ec4899/ffffff',
-                                    'daisy-chain': '6366f1/ffffff'
-                                };
+                                const imagePrompt = createImagePrompt(projectId, post.content, post.platform, forceNew);
+                                const timestamp = Date.now() + (generatedCount * 1000);
+                                const encodedPrompt = encodeURIComponent(imagePrompt);
                                 
-                                const color = colors[projectId] || '6b7280/ffffff';
-                                const text = encodeURIComponent(`${projectId}\n${post.scheduledDay}`);
+                                // Pollinations AI with flux model
+                                const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1080&height=1080&seed=${timestamp}&model=flux&enhance=true&nologo=true`;
                                 
-                                // Reliable placeholder service
-                                post.imageUrl = `https://placehold.co/1080x1080/${color}?text=${text}&font=roboto`;
+                                post.imageUrl = imageUrl;
+                                
+                                // Verify image loads
+                                const imagePromise = new Promise((resolve) => {
+                                    const img = new Image();
+                                    const timeout = setTimeout(() => {
+                                        console.log(`Image ${generatedCount} timeout (normal for free API)`);
+                                        resolve();
+                                    }, 20000);
+                                    
+                                    img.onload = () => {
+                                        clearTimeout(timeout);
+                                        setImageProgress(`Loaded ${generatedCount} of ${totalPosts}...`);
+                                        resolve();
+                                    };
+                                    
+                                    img.onerror = () => {
+                                        clearTimeout(timeout);
+                                        resolve();
+                                    };
+                                    
+                                    img.src = imageUrl;
+                                });
+                                
+                                imagePromises.push(imagePromise);
+                                
+                                // 5 second delay between requests to avoid rate limits
+                                await new Promise(resolve => setTimeout(resolve, 5000));
                             }
                         }
                     }
                     
+                    setImageProgress(`Finalizing...`);
+                    await Promise.all(imagePromises);
+                    
                     setGeneratedContent(updatedContent);
                     setImageProgress('');
-                    alert(`✅ ${totalPosts} placeholder images added!\n\n💡 Click "📤 Upload" on each post to add your Canva images.\n\nThis is faster and gives you perfect quality!`);
+                    
+                    const lockedCount = Object.keys(lockedImages).filter(k => lockedImages[k]).length;
+                    alert(`✅ Generated ${totalPosts} images!\n\n${lockedCount > 0 ? `🔒 ${lockedCount} locked.\n\n` : ''}⚠️ Free API limits mean some may not load:\n• Upload your own if needed\n• Regenerate to retry\n• Wait 30s then refresh`);
                 } catch (error) {
                     alert('Error: ' + error.message);
                 } finally {
                     setGeneratingImages(false);
+                    setImageProgress('');
                 }
             };
             
