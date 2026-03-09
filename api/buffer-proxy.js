@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
   res.setHeader(
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
@@ -13,35 +13,48 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { endpoint, method = 'GET', body } = req.body;
+  const { endpoint, method = 'GET', params } = req.body;
+
+  if (!endpoint) {
+    return res.status(400).json({ error: 'Missing endpoint parameter' });
+  }
 
   try {
-    const response = await fetch(`https://api.bufferapp.com${endpoint}`, {
+    let url = `https://api.bufferapp.com${endpoint}`;
+    let options = {
       method: method,
       headers: {
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
+        'Accept': 'application/json'
+      }
+    };
 
-    const data = await response.json();
+    // For POST requests with form data
+    if (method === 'POST' && params) {
+      options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+      options.body = params;
+    }
+
+    const response = await fetch(url, options);
+    const contentType = response.headers.get('content-type');
+    
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        data = { error: 'Invalid response from Buffer API', rawResponse: text };
+      }
+    }
+
     res.status(response.status).json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Buffer proxy error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Failed to connect to Buffer API'
+    });
   }
 }
-```
-
-### **Step 3: Commit**
-
-- Scroll down
-- Click **"Commit changes"**
-
----
-
-## ✅ Your GitHub Should Have:
-```
-automation-hub/
-├── index.html (updated)
-└── api/
-    └── buffer-proxy.js (NEW)
