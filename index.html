@@ -65,12 +65,27 @@
                     let totalPosts = 0;
                     let generatedCount = 0;
                     
-                    // Count total social posts
+                    // Count total social posts that need images
                     Object.values(generatedContent).forEach(project => {
-                        if (project.social) totalPosts += project.social.length;
+                        if (project.social) {
+                            project.social.forEach((post, i) => {
+                                const imageKey = `${project.id || Object.keys(generatedContent).find(k => generatedContent[k] === project)}-${i}`;
+                                if (!lockedImages[imageKey]) {
+                                    totalPosts++;
+                                }
+                            });
+                        }
                     });
                     
-                    // Generate placeholder images for each social post
+                    if (totalPosts === 0) {
+                        alert('All images are locked! Unlock some images to regenerate them.');
+                        setGeneratingImages(false);
+                        return;
+                    }
+                    
+                    const imagePromises = [];
+                    
+                    // Generate images for each social post
                     for (const [projectId, projectData] of Object.entries(updatedContent)) {
                         if (projectData.social) {
                             for (let i = 0; i < projectData.social.length; i++) {
@@ -83,28 +98,69 @@
                                 }
                                 
                                 generatedCount++;
-                                setImageProgress(`Adding placeholder ${generatedCount} of ${totalPosts}...`);
+                                const currentCount = generatedCount;
+                                setImageProgress(`Generating image ${currentCount} of ${totalPosts}... (may take 30-60 seconds total)`);
                                 
-                                // Get theme color for project
-                                const themeColor = getProjectColor(projectId);
-                                const projectName = getProjectName(projectId);
+                                // Create detailed prompt from post content
+                                const imagePrompt = createImagePrompt(projectId, post.content, post.platform, forceNew);
                                 
-                                // Use placeholder.com for reliable, instant images
-                                const imageUrl = `https://placehold.co/1200x1200/${themeColor}/white?text=${encodeURIComponent(projectName)}`;
+                                // Use unique timestamp for each image
+                                const timestamp = Date.now() + (currentCount * 1000);
                                 
-                                // Store the image URL
-                                post.imageUrl = imageUrl;
+                                // Pollinations with flux model (better quality)
+                                const encodedPrompt = encodeURIComponent(imagePrompt);
+                                const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&seed=${timestamp}&model=flux&enhance=true&nologo=true`;
+                                
+                                // Create promise to preload image
+                                const imagePromise = new Promise((resolve) => {
+                                    const img = new Image();
+                                    
+                                    // Set timeout to prevent hanging
+                                    const timeout = setTimeout(() => {
+                                        console.log(`Image ${currentCount} timed out, using URL anyway`);
+                                        post.imageUrl = imageUrl;
+                                        resolve();
+                                    }, 15000); // 15 second timeout per image
+                                    
+                                    img.onload = () => {
+                                        clearTimeout(timeout);
+                                        post.imageUrl = imageUrl;
+                                        setImageProgress(`Loaded ${currentCount} of ${totalPosts}...`);
+                                        resolve();
+                                    };
+                                    
+                                    img.onerror = () => {
+                                        clearTimeout(timeout);
+                                        console.log(`Image ${currentCount} failed to load, using URL anyway`);
+                                        post.imageUrl = imageUrl;
+                                        resolve();
+                                    };
+                                    
+                                    img.src = imageUrl;
+                                });
+                                
+                                imagePromises.push(imagePromise);
+                                
+                                // CRITICAL: 3 second delay between starting each image generation
+                                // This prevents Pollinations rate limiting
+                                await new Promise(resolve => setTimeout(resolve, 3000));
                             }
                         }
                     }
                     
+                    // Wait for all images to load or timeout
+                    setImageProgress(`Finalizing all images... please wait`);
+                    await Promise.all(imagePromises);
+                    
                     setGeneratedContent(updatedContent);
                     setImageProgress('');
-                    alert('✅ Placeholder images added!\n\nClick "Upload Image" on each post to add your own images from Canva or your camera roll.');
+                    alert(`✅ Generated ${totalPosts} images!\n\n${lockedImages && Object.keys(lockedImages).filter(k => lockedImages[k]).length > 0 ? 'Locked images were kept.\n\n' : ''}If any images look bad or didn't load:\n• Click "Upload" to use your own\n• Click "Regenerate" to try again`);
                 } catch (error) {
-                    alert('Error generating images: ' + error.message);
+                    console.error('Image generation error:', error);
+                    alert('Error generating images: ' + error.message + '\n\nTry clicking "Regenerate Images" or use "Upload" to add your own images.');
                 } finally {
                     setGeneratingImages(false);
+                    setImageProgress('');
                 }
             };
             
