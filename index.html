@@ -426,8 +426,10 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                     
                     const data = await response.json();
                     
+                    console.log('Buffer response:', data); // Debug logging
+                    
                     if (data.error) {
-                        alert('Error: ' + data.error);
+                        alert('Error from Buffer: ' + JSON.stringify(data.error) + '\n\nRaw response: ' + JSON.stringify(data.rawResponse || 'No raw response'));
                         return;
                     }
                     
@@ -441,7 +443,7 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                             alert('❌ No Instagram accounts found in Buffer.\n\nPlease connect your Instagram accounts to Buffer first.');
                         }
                     } else {
-                        alert('Error fetching accounts. Make sure your Buffer API key is correct.');
+                        alert('Unexpected response format. Check browser console (F12) for details.\n\nResponse: ' + JSON.stringify(data).substring(0, 200));
                     }
                 } catch (error) {
                     alert('Error connecting to Buffer: ' + error.message);
