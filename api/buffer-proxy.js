@@ -20,8 +20,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Buffer's GraphQL endpoint
-    const response = await fetch('https://graph.buffer.com/graphql', {
+    // Buffer's GraphQL endpoint - using api.buffer.com as per error message
+    const response = await fetch('https://api.buffer.com/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
