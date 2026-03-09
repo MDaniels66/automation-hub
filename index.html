@@ -531,12 +531,25 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                     for (const post of instagramPosts) {
                         const scheduledTime = getScheduledTime(post.scheduledDay);
                         
-                        // GraphQL mutation to create post
+                        // Buffer's GraphQL mutation to create post
                         const mutation = `
-                            mutation CreatePost($channelId: ID!, $text: String!, $scheduledAt: DateTime!, $media: [MediaInput!]) {
-                                postCreate(channelId: $channelId, text: $text, scheduledAt: $scheduledAt, media: $media) {
-                                    post {
-                                        id
+                            mutation CreatePost($channelId: ID!, $text: String!, $dueAt: DateTime!, $media: [MediaInput!]) {
+                                createPost(input: {
+                                    channelId: $channelId,
+                                    text: $text,
+                                    schedulingType: automatic,
+                                    mode: customSchedule,
+                                    dueAt: $dueAt,
+                                    media: $media
+                                }) {
+                                    ... on PostActionSuccess {
+                                        post {
+                                            id
+                                            text
+                                        }
+                                    }
+                                    ... on MutationError {
+                                        message
                                     }
                                 }
                             }
@@ -545,7 +558,7 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                         const variables = {
                             channelId: post.accountId,
                             text: post.content,
-                            scheduledAt: new Date(scheduledTime * 1000).toISOString(),
+                            dueAt: new Date(scheduledTime * 1000).toISOString(),
                             media: post.imageUrl ? [{
                                 url: post.imageUrl
                             }] : []
@@ -565,9 +578,12 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                             });
                             
                             const result = await response.json();
+                            console.log('Buffer response:', result);
                             
-                            if (result.data && result.data.postCreate) {
+                            if (result.data && result.data.createPost && result.data.createPost.post) {
                                 scheduled++;
+                            } else if (result.data && result.data.createPost && result.data.createPost.message) {
+                                errors.push(`${post.projectId} ${post.scheduledDay}: ${result.data.createPost.message}`);
                             } else if (result.errors) {
                                 errors.push(`${post.projectId} ${post.scheduledDay}: ${result.errors[0].message}`);
                             }
