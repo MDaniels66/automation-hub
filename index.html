@@ -506,7 +506,7 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                         accountId = daisyChainAccount;
                                     }
                                     
-                                    if (accountId) {
+                                    if (accountId && post.imageUrl && !post.imageUrl.includes('placehold.co')) {
                                         instagramPosts.push({
                                             ...post,
                                             projectId,
@@ -519,53 +519,74 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                     });
                     
                     if (instagramPosts.length === 0) {
-                        alert('No Instagram posts found to schedule!');
+                        alert('⚠️ No Instagram posts ready to schedule!\n\nMake sure all posts have images (not placeholders).\n\nUse "Upload" button to add images, then try again.');
                         setIsScheduling(false);
                         return;
                     }
                     
-                    // Schedule each post
+                    // Schedule each post using GraphQL
                     let scheduled = 0;
+                    const errors = [];
+                    
                     for (const post of instagramPosts) {
                         const scheduledTime = getScheduledTime(post.scheduledDay);
                         
-                        // Build URL-encoded parameters for Buffer
-                        const params = new URLSearchParams({
-                            access_token: apiKeys.buffer,
+                        // GraphQL mutation to create post
+                        const mutation = `
+                            mutation CreatePost($channelId: ID!, $text: String!, $scheduledAt: DateTime!, $media: [MediaInput!]) {
+                                postCreate(channelId: $channelId, text: $text, scheduledAt: $scheduledAt, media: $media) {
+                                    post {
+                                        id
+                                    }
+                                }
+                            }
+                        `;
+                        
+                        const variables = {
+                            channelId: post.accountId,
                             text: post.content,
-                            'profile_ids[]': post.accountId,
-                            scheduled_at: scheduledTime
-                        });
+                            scheduledAt: new Date(scheduledTime * 1000).toISOString(),
+                            media: post.imageUrl ? [{
+                                url: post.imageUrl
+                            }] : []
+                        };
                         
-                        // Add image if available (not placeholder)
-                        if (post.imageUrl && !post.imageUrl.includes('placehold.co')) {
-                            params.append('media[photo]', post.imageUrl);
-                        }
-                        
-                        const response = await fetch('/api/buffer-proxy', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                endpoint: '/1/updates/create.json',
+                        try {
+                            const response = await fetch('/api/buffer-proxy', {
                                 method: 'POST',
-                                params: params.toString()
-                            })
-                        });
-                        
-                        if (response.ok) {
-                            scheduled++;
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    query: mutation,
+                                    variables: variables,
+                                    token: apiKeys.buffer
+                                })
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.data && result.data.postCreate) {
+                                scheduled++;
+                            } else if (result.errors) {
+                                errors.push(`${post.projectId} ${post.scheduledDay}: ${result.errors[0].message}`);
+                            }
+                        } catch (error) {
+                            errors.push(`${post.projectId} ${post.scheduledDay}: ${error.message}`);
                         }
                         
                         // Small delay to avoid rate limiting
                         await new Promise(resolve => setTimeout(resolve, 500));
                     }
                     
-                    alert(`✅ Success! Scheduled ${scheduled} Instagram posts via Buffer.\n\nThey'll post automatically throughout the week!`);
+                    if (scheduled > 0) {
+                        alert(`✅ Success! Scheduled ${scheduled} Instagram posts via Buffer.\n\nThey'll post automatically throughout the week!${errors.length > 0 ? '\n\n⚠️ Some posts failed:\n' + errors.join('\n') : ''}`);
+                    } else {
+                        alert(`❌ Failed to schedule posts.\n\nErrors:\n${errors.join('\n')}\n\nCheck:\n1. Buffer API key is correct\n2. Instagram accounts are connected\n3. Images are valid URLs (not placeholders)`);
+                    }
                     
                 } catch (error) {
-                    alert('Error scheduling Instagram posts:\n\n' + error.message + '\n\nMake sure:\n1. Buffer API key is correct\n2. Instagram is connected to Buffer\n3. You have available posting slots');
+                    alert('Error scheduling Instagram posts:\n\n' + error.message + '\n\nMake sure:\n1. Buffer API key is correct\n2. Instagram is connected to Buffer\n3. All posts have images');
                 } finally {
                     setIsScheduling(false);
                 }
