@@ -505,20 +505,29 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                             ? `${post.content}\n\n[Image: ${post.imageUrl}]`
                             : post.content;
                         
+                        // Buffer API needs media_url for Instagram images
+                        const requestBody = {
+                            text: post.content,
+                            profile_ids: [post.accountId],
+                            scheduled_at: scheduledTime
+                        };
+                        
+                        // Add image URL if available
+                        if (post.imageUrl && !post.imageUrl.includes('placehold.co')) {
+                            requestBody.media = {
+                                photo: post.imageUrl
+                            };
+                        }
+                        
                         const response = await fetch('/api/buffer-proxy', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                endpoint: '/1/updates/create.json',
+                                endpoint: `/1/updates/create.json?access_token=${apiKeys.buffer}`,
                                 method: 'POST',
-                                body: {
-                                    access_token: apiKeys.buffer,
-                                    text: postText,
-                                    profile_ids: [post.accountId],
-                                    scheduled_at: scheduledTime
-                                }
+                                body: requestBody
                             })
                         });
                         
