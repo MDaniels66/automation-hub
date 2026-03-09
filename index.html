@@ -85,48 +85,44 @@
                                 }
                                 
                                 generatedCount++;
-                                setImageProgress(`Creating image URL ${generatedCount} of ${totalPosts}...`);
+                                setImageProgress(`Generating image ${generatedCount} of ${totalPosts}...`);
                                 
-                                // Create search keywords from post content
-                                const imageKeywords = getImageKeywords(projectId, post.content);
+                                // Create prompt from post content
+                                const imagePrompt = createImagePrompt(projectId, post.content, post.platform, forceNew);
                                 
-                                // Use Unsplash API for free stock photos (much more reliable)
-                                const imageUrl = `https://source.unsplash.com/1200x1200/?${encodeURIComponent(imageKeywords)}`;
+                                try {
+                                    // Call our Hugging Face proxy
+                                    const response = await fetch('/api/generate-image', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({
+                                            prompt: imagePrompt
+                                        })
+                                    });
+                                    
+                                    const data = await response.json();
+                                    
+                                    if (data.success && data.image) {
+                                        post.imageUrl = data.image;
+                                        imageUrls.push(data.image);
+                                    } else {
+                                        console.error('Image generation failed:', data.error);
+                                    }
+                                } catch (error) {
+                                    console.error('Error generating image:', error);
+                                }
                                 
-                                // Store the image URL
-                                post.imageUrl = imageUrl;
-                                imageUrls.push(imageUrl);
+                                // Small delay between requests
+                                await new Promise(resolve => setTimeout(resolve, 2000));
                             }
                         }
                     }
                     
-                    // Now preload all images to force them to generate
-                    setImageProgress(`Loading ${imageUrls.length} images... this may take 1-2 minutes`);
-                    
-                    const preloadPromises = imageUrls.map((url, index) => {
-                        return new Promise((resolve) => {
-                            const img = new Image();
-                            img.onload = () => {
-                                setImageProgress(`Loaded ${index + 1} of ${imageUrls.length} images...`);
-                                resolve();
-                            };
-                            img.onerror = () => {
-                                console.log(`Failed to load image ${index + 1}`);
-                                resolve(); // Continue anyway
-                            };
-                            img.src = url;
-                        });
-                    });
-                    
-                    // Wait for all images to load (with 2 minute timeout)
-                    await Promise.race([
-                        Promise.all(preloadPromises),
-                        new Promise(resolve => setTimeout(resolve, 120000)) // 2 minute max
-                    ]);
-                    
                     setGeneratedContent(updatedContent);
                     setImageProgress('');
-                    alert('✅ Images loaded! Locked images were kept. If any images are still missing, try clicking Regenerate Images.');
+                    alert('✅ Images generated! Locked images were kept.');
                 } catch (error) {
                     alert('Error generating images: ' + error.message);
                 } finally {
