@@ -413,15 +413,12 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                 }
                 
                 try {
-                    const response = await fetch('/api/buffer-proxy', {
-                        method: 'POST',
+                    // Call Buffer API directly
+                    const response = await fetch(`https://api.bufferapp.com/1/profiles.json?access_token=${apiKeys.buffer}`, {
+                        method: 'GET',
                         headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            endpoint: `/1/profiles.json?access_token=${apiKeys.buffer}`,
-                            method: 'GET'
-                        })
+                            'Accept': 'application/json'
+                        }
                     });
                     
                     const data = await response.json();
@@ -439,7 +436,7 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                         alert('Error fetching accounts. Make sure your Buffer API key is correct.');
                     }
                 } catch (error) {
-                    alert('Error connecting to Buffer: ' + error.message);
+                    alert('Error connecting to Buffer: ' + error.message + '\n\nNote: Due to browser security, you may need to schedule posts manually at buffer.com');
                 }
             };
 
@@ -500,35 +497,25 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                     for (const post of instagramPosts) {
                         const scheduledTime = getScheduledTime(post.scheduledDay);
                         
-                        // Buffer Instagram posts require media URL to be included
-                        const postText = post.imageUrl 
-                            ? `${post.content}\n\n[Image: ${post.imageUrl}]`
-                            : post.content;
-                        
-                        // Buffer API needs media_url for Instagram images
-                        const requestBody = {
+                        // Call Buffer API directly with proper parameters
+                        const params = new URLSearchParams({
+                            access_token: apiKeys.buffer,
                             text: post.content,
-                            profile_ids: [post.accountId],
+                            'profile_ids[]': post.accountId,
                             scheduled_at: scheduledTime
-                        };
+                        });
                         
-                        // Add image URL if available
+                        // Add image if available (not placeholder)
                         if (post.imageUrl && !post.imageUrl.includes('placehold.co')) {
-                            requestBody.media = {
-                                photo: post.imageUrl
-                            };
+                            params.append('media[photo]', post.imageUrl);
                         }
                         
-                        const response = await fetch('/api/buffer-proxy', {
+                        const response = await fetch(`https://api.bufferapp.com/1/updates/create.json`, {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/x-www-form-urlencoded',
                             },
-                            body: JSON.stringify({
-                                endpoint: `/1/updates/create.json?access_token=${apiKeys.buffer}`,
-                                method: 'POST',
-                                body: requestBody
-                            })
+                            body: params.toString()
                         });
                         
                         if (response.ok) {
