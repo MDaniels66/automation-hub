@@ -55,102 +55,9 @@
                 }
             };
 
-            const generateImages = async (forceNew = false) => {
-                if (!generatedContent) return;
-                
-                setGeneratingImages(true);
-                const updatedContent = JSON.parse(JSON.stringify(generatedContent));
-                
-                try {
-                    let totalPosts = 0;
-                    let generatedCount = 0;
-                    
-                    // Count posts needing images
-                    Object.values(generatedContent).forEach(project => {
-                        if (project.social) {
-                            project.social.forEach((post, i) => {
-                                const projectId = Object.keys(generatedContent).find(k => generatedContent[k] === project);
-                                const imageKey = `${projectId}-${i}`;
-                                if (!lockedImages[imageKey]) {
-                                    totalPosts++;
-                                }
-                            });
-                        }
-                    });
-                    
-                    if (totalPosts === 0) {
-                        alert('All images are locked! Unlock some to regenerate.');
-                        setGeneratingImages(false);
-                        return;
-                    }
-                    
-                    const imagePromises = [];
-                    
-                    // Generate with Pollinations AI
-                    for (const [projectId, projectData] of Object.entries(updatedContent)) {
-                        if (projectData.social) {
-                            for (let i = 0; i < projectData.social.length; i++) {
-                                const post = projectData.social[i];
-                                const imageKey = `${projectId}-${i}`;
-                                
-                                if (lockedImages[imageKey]) continue;
-                                
-                                generatedCount++;
-                                setImageProgress(`Generating ${generatedCount} of ${totalPosts}... (takes 1-2 minutes)`);
-                                
-                                const imagePrompt = createImagePrompt(projectId, post.content, post.platform, forceNew);
-                                const timestamp = Date.now() + (generatedCount * 1000);
-                                const encodedPrompt = encodeURIComponent(imagePrompt);
-                                
-                                // Pollinations AI with flux model
-                                const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1080&height=1080&seed=${timestamp}&model=flux&enhance=true&nologo=true`;
-                                
-                                post.imageUrl = imageUrl;
-                                
-                                // Verify image loads
-                                const imagePromise = new Promise((resolve) => {
-                                    const img = new Image();
-                                    const timeout = setTimeout(() => {
-                                        console.log(`Image ${generatedCount} timeout (normal for free API)`);
-                                        resolve();
-                                    }, 20000);
-                                    
-                                    img.onload = () => {
-                                        clearTimeout(timeout);
-                                        setImageProgress(`Loaded ${generatedCount} of ${totalPosts}...`);
-                                        resolve();
-                                    };
-                                    
-                                    img.onerror = () => {
-                                        clearTimeout(timeout);
-                                        resolve();
-                                    };
-                                    
-                                    img.src = imageUrl;
-                                });
-                                
-                                imagePromises.push(imagePromise);
-                                
-                                // 5 second delay between requests to avoid rate limits
-                                await new Promise(resolve => setTimeout(resolve, 5000));
-                            }
-                        }
-                    }
-                    
-                    setImageProgress(`Finalizing...`);
-                    await Promise.all(imagePromises);
-                    
-                    setGeneratedContent(updatedContent);
-                    setImageProgress('');
-                    
-                    const lockedCount = Object.keys(lockedImages).filter(k => lockedImages[k]).length;
-                    alert(`✅ Generated ${totalPosts} images!\n\n${lockedCount > 0 ? `🔒 ${lockedCount} locked.\n\n` : ''}⚠️ Free API limits mean some may not load:\n• Upload your own if needed\n• Regenerate to retry\n• Wait 30s then refresh`);
-                } catch (error) {
-                    alert('Error: ' + error.message);
-                } finally {
-                    setGeneratingImages(false);
-                    setImageProgress('');
-                }
+            // No AI generation - upload only
+            const generateImages = () => {
+                alert('⚠️ AI image generation removed due to reliability issues.\n\n✅ Use the "📤 Upload" button on each post to add your images.\n\nThis is faster and gives you perfect quality!');
             };
             
             const getProjectColor = (projectId) => {
@@ -530,17 +437,16 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                     
                     for (const post of instagramPosts) {
                         const scheduledTime = getScheduledTime(post.scheduledDay);
+                        const dueAtISO = new Date(scheduledTime * 1000).toISOString();
                         
-                        // Buffer's GraphQL mutation to create post
+                        // Simplified mutation - text and schedule only, no image
                         const mutation = `
-                            mutation CreatePost($channelId: ID!, $text: String!, $dueAt: DateTime!, $media: [MediaInput!]) {
+                            mutation {
                                 createPost(input: {
-                                    channelId: $channelId,
-                                    text: $text,
+                                    text: "${post.content.replace(/"/g, '\\"').replace(/\n/g, '\\n')}",
+                                    channelId: "${post.accountId}",
                                     schedulingType: automatic,
-                                    mode: customSchedule,
-                                    dueAt: $dueAt,
-                                    media: $media
+                                    dueAt: "${dueAtISO}"
                                 }) {
                                     ... on PostActionSuccess {
                                         post {
@@ -555,15 +461,6 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                             }
                         `;
                         
-                        const variables = {
-                            channelId: post.accountId,
-                            text: post.content,
-                            dueAt: new Date(scheduledTime * 1000).toISOString(),
-                            media: post.imageUrl ? [{
-                                url: post.imageUrl
-                            }] : []
-                        };
-                        
                         try {
                             const response = await fetch('/api/buffer-proxy', {
                                 method: 'POST',
@@ -572,7 +469,6 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                 },
                                 body: JSON.stringify({
                                     query: mutation,
-                                    variables: variables,
                                     token: apiKeys.buffer
                                 })
                             });
@@ -586,6 +482,8 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                 errors.push(`${post.projectId} ${post.scheduledDay}: ${result.data.createPost.message}`);
                             } else if (result.errors) {
                                 errors.push(`${post.projectId} ${post.scheduledDay}: ${result.errors[0].message}`);
+                            } else {
+                                errors.push(`${post.projectId} ${post.scheduledDay}: Unknown error`);
                             }
                         } catch (error) {
                             errors.push(`${post.projectId} ${post.scheduledDay}: ${error.message}`);
@@ -821,19 +719,12 @@ TONE: Warm, authentic, professional, inclusion-focused. "Different abilities, en
                                 <button
                                     onClick={() => generateImages(false)}
                                     disabled={generatingImages}
-                                    className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-300"
+                                    className="bg-gray-400 text-white px-6 py-2 rounded-lg font-semibold cursor-not-allowed"
+                                    title="AI generation disabled - use Upload instead"
                                 >
-                                    {generatingImages ? `⏳ ${imageProgress}` : '🎨 Generate Images (Free)'}
+                                    🚫 AI Images (Disabled)
                                 </button>
-                                {generatedContent && (
-                                    <button
-                                        onClick={() => generateImages(true)}
-                                        disabled={generatingImages}
-                                        className="bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-700 disabled:bg-gray-300"
-                                    >
-                                        🔄 Regenerate Images
-                                    </button>
-                                )}
+                                {/* Regenerate button removed - upload only workflow */}
                                 {apiKeys.buffer && (
                                     <button
                                         onClick={scheduleInstagram}
